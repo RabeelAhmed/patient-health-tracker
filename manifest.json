@@ -1,0 +1,21 @@
+{
+    "name": "Patient Health Tracker",
+    "short_name": "HealthTrack",
+    "description": "Track your blood pressure and sugar levels locally.",
+    "start_url": "/PatientHealthTracking/index.html",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#0ea5e9",
+    "icons": [
+        {
+            "src": "https://cdn-icons-png.flaticon.com/512/3004/3004458.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "https://cdn-icons-png.flaticon.com/512/3004/3004458.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+}
