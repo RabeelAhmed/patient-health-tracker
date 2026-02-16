@@ -176,6 +176,10 @@ const refreshUI = () => {
 
     UI.renderTable(displayedRecords);
     UI.renderSummary(Storage.calculateStats(displayedRecords));
+    // Always calculate status based on FULL history for 'Today', or just filtered? 
+    // Usually 'Today's status' shouldn't depend on filter, but contextually it matters most when viewing recent.
+    // Let's pass all records to find 'today', independent of filter (e.g., if filtering by last month, today is still today).
+    UI.renderHealthStatus(allRecords); 
     Charts.updateCharts(displayedRecords);
 };
 
@@ -231,5 +235,89 @@ const setupDataPersistence = () => {
     }
 };
 
+// Notification System
+const setupNotifications = () => {
+    const notifyBtn = document.getElementById('notifyBtn');
+    
+    // Check permission status on load
+    updateNotifyIcon();
+
+    if (notifyBtn) {
+        notifyBtn.addEventListener('click', () => {
+            if (!("Notification" in window)) {
+                UI.showAlert("This browser does not support notifications", "error");
+                return;
+            }
+
+            if (Notification.permission === "granted") {
+                // Ideally toggle off? Browsers don't let you easily "revoke" permission via JS.
+                // We can just emulate disabling by saving a flag in localStorage.
+                const isEnabled = localStorage.getItem('notificationsEnabled') === 'true';
+                localStorage.setItem('notificationsEnabled', !isEnabled);
+                UI.showAlert(isEnabled ? "Reminders Disabled" : "Reminders Enabled");
+                updateNotifyIcon();
+            } else if (Notification.permission !== "denied") {
+                Notification.requestPermission().then(permission => {
+                    if (permission === "granted") {
+                        localStorage.setItem('notificationsEnabled', 'true');
+                        UI.showAlert("Reminders Enabled!");
+                        updateNotifyIcon();
+                        // Test notification
+                        new Notification("Health Tracker", { body: "Reminders are now active!" });
+                    }
+                });
+            }
+        });
+    }
+
+    // Check for reminders every minute
+    setInterval(checkReminders, 60000);
+};
+
+const updateNotifyIcon = () => {
+    const btn = document.getElementById('notifyBtn');
+    if (!btn) return;
+    
+    const isEnabled = localStorage.getItem('notificationsEnabled') === 'true';
+    const hasPerm = Notification.permission === 'granted';
+    
+    if (isEnabled && hasPerm) {
+        btn.innerHTML = '<i class="fas fa-bell text-medical-600 text-lg"></i>';
+    } else {
+        btn.innerHTML = '<i class="fas fa-bell-slash text-gray-400 text-lg"></i>';
+    }
+};
+
+const checkReminders = () => {
+    const isEnabled = localStorage.getItem('notificationsEnabled') === 'true';
+    if (!isEnabled || Notification.permission !== "granted") return;
+
+    const now = new Date();
+    const hours = now.getHours();
+    const minutes = now.getMinutes();
+
+    // Morning Reminder (e.g., 8:00 AM)
+    if (hours === 8 && minutes === 0) {
+        sendNotification("Good Morning! ☀️", "Time to check your fasting sugar level.");
+    }
+    
+    // Evening Reminder (e.g., 8:00 PM / 20:00)
+    if (hours === 20 && minutes === 0) {
+        sendNotification("Good Evening! 🌙", "Time to check your after-meal sugar level.");
+    }
+};
+
+const sendNotification = (title, body) => {
+    // Basic service worker registration would be better for reliable notifications,
+    // but for this scope, simple new Notification is okay if tab is active.
+    new Notification(title, {
+        body,
+        icon: 'https://cdn-icons-png.flaticon.com/512/2966/2966327.png' // Generic health icon
+    });
+};
+
 // Start App when DOM is ready
-document.addEventListener('DOMContentLoaded', init);
+document.addEventListener('DOMContentLoaded', () => {
+    init();
+    setupNotifications();
+});

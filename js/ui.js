@@ -208,6 +208,73 @@ export const renderSummary = (stats) => {
     if (stats.avgSugarAfter) avgSugarAfter.className = `text-xl font-bold mt-1 ${getValueColor(stats.avgSugarAfter, 'sugarValAfter').split(' ')[0]}`;
 };
 
+export const renderHealthStatus = (records) => {
+    const today = new Date().toISOString().split('T')[0];
+    const todayRecord = records.find(r => r.date === today);
+    const badge = document.getElementById('statusBadge');
+    
+    // Show badge only if we have data today? Or show "No Data" if none?
+    // User asked "Today's Status", so let's show status of latest record if today matches, 
+    // or maybe just "No Entry for Today" if missing.
+    // Let's go with showing it if valid data exists for today.
+    
+    badge.classList.remove('hidden');
+    const statusText = document.getElementById('statusText');
+    const statusIcon = document.getElementById('statusIcon');
+    
+    if (!todayRecord) {
+        badge.className = "bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border-l-4 border-gray-300 dark:border-gray-600 flex items-center justify-between transition-colors duration-300";
+        statusText.textContent = "No Entry Today";
+        statusText.className = "text-lg font-bold text-gray-500 dark:text-gray-400 mt-1";
+        statusIcon.innerHTML = '<i class="fas fa-calendar-times text-gray-300"></i>';
+        return;
+    }
+
+    // Logic: Critical vs Warning vs Normal
+    // Rule: Sugar > 180 -> Critical
+    // Rule: BP > 140/90 -> Critical (Sys > 140 OR Dia > 90)
+    
+    // Warning Thresholds (Inferred):
+    // BP: 120-139 / 80-89
+    // Sugar: 140-180
+    
+    let isCritical = false;
+    let isWarning = false;
+
+    // Check BP
+    if (todayRecord.systolic && todayRecord.diastolic) {
+        if (todayRecord.systolic > 140 || todayRecord.diastolic > 90) isCritical = true;
+        else if (todayRecord.systolic >= 120 || todayRecord.diastolic >= 80) isWarning = true;
+    }
+
+    // Check Sugar (Any high reading triggers)
+    if (todayRecord.sugarBefore) {
+        if (todayRecord.sugarBefore > 180) isCritical = true; // Strict? Or 130 fasting? User said >180 general
+        else if (todayRecord.sugarBefore > 110) isWarning = true; // Typical fasting warning
+    }
+    if (todayRecord.sugarAfter) {
+        if (todayRecord.sugarAfter > 180) isCritical = true;
+        else if (todayRecord.sugarAfter > 140) isWarning = true;
+    }
+
+    if (isCritical) {
+        badge.className = "bg-red-50 dark:bg-red-900/10 p-4 rounded-xl shadow-sm border-l-4 border-red-500 flex items-center justify-between transition-colors duration-300";
+        statusText.textContent = "Critical ❌";
+        statusText.className = "text-lg font-bold text-red-600 dark:text-red-400 mt-1";
+        statusIcon.innerHTML = '<i class="fas fa-exclamation-circle text-red-500"></i>';
+    } else if (isWarning) {
+        badge.className = "bg-yellow-50 dark:bg-yellow-900/10 p-4 rounded-xl shadow-sm border-l-4 border-yellow-500 flex items-center justify-between transition-colors duration-300";
+        statusText.textContent = "Warning ⚠️";
+        statusText.className = "text-lg font-bold text-yellow-600 dark:text-yellow-400 mt-1";
+        statusIcon.innerHTML = '<i class="fas fa-exclamation-triangle text-yellow-500"></i>';
+    } else {
+        badge.className = "bg-green-50 dark:bg-green-900/10 p-4 rounded-xl shadow-sm border-l-4 border-green-500 flex items-center justify-between transition-colors duration-300";
+        statusText.textContent = "Normal ✅";
+        statusText.className = "text-lg font-bold text-green-600 dark:text-green-400 mt-1";
+        statusIcon.innerHTML = '<i class="fas fa-check-circle text-green-500"></i>';
+    }
+};
+
 // Theme Toggling
 export const toggleTheme = () => {
     const html = document.documentElement;
